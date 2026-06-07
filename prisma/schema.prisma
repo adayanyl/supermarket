@@ -1,0 +1,151 @@
+// Modelo de dados do app "Dispensa" — compras (NFC-e), estoque e lista mensal.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---- Catálogo ------------------------------------------------------------
+
+model Product {
+  id             String  @id @default(cuid())
+  name           String // nome canônico, editável
+  normalizedName String // forma normalizada (sem acento/caixa) para matching
+  ean            String? @unique // código de barras, quando houver
+  unit           String  @default("UN") // UN, KG, L, PCT...
+  category       String?
+
+  aliases       ProductAlias[]
+  purchaseItems PurchaseItem[]
+  movements     StockMovement[]
+  listItems     ShoppingListItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([normalizedName])
+}
+
+// Cada descrição/EAN já visto num cupom, mapeado para o produto canônico.
+// É o que faz o matching melhorar sozinho a cada importação.
+model ProductAlias {
+  id             String   @id @default(cuid())
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId      String
+  rawDescription String // texto cru como apareceu no cupom
+  normalizedText String // normalize(rawDescription)
+  ean            String?
+  source         String   @default("import") // "import" | "manual" | "merge"
+  confidence     Float    @default(1) // 1 = confirmado pelo usuário; <1 = fuzzy/auto
+  createdAt      DateTime @default(now())
+
+  @@index([normalizedText])
+  @@index([ean])
+  @@index([productId])
+}
+
+// ---- Compras (cupom) -----------------------------------------------------
+
+model Store {
+  id        String     @id @default(cuid())
+  cnpj      String     @unique
+  name      String?
+  uf        String?
+  city      String?
+  purchases Purchase[]
+}
+
+model Purchase {
+  id           String   @id @default(cuid())
+  accessKey    String?  @unique // chave de acesso (44 dígitos) — dedup
+  purchasedAt  DateTime // data do cupom (fallback: momento do scan)
+  totalValue   Float?
+  importStatus String   @default("manual") // "auto" | "partial" | "manual"
+  sefazUrl     String?
+  uf           String?
+  rawHtml      String? // cache opcional do HTML raspado (debug/reparse)
+
+  store   Store?  @relation(fields: [storeId], references: [id])
+  storeId String?
+
+  items PurchaseItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purchasedAt])
+}
+
+model PurchaseItem {
+  id             String   @id @default(cuid())
+  purchase       Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  purchaseId     String
+  rawDescription String // descrição original do cupom (mantida mesmo após match)
+  ean            String?
+  quantity       Float
+  unit           String   @default("UN")
+  unitPrice      Float // valor por unidade
+  totalPrice     Float // total da linha
+
+  product   Product? @relation(fields: [productId], references: [id])
+  productId String?
+
+  movement StockMovement? // a movimentação IN gerada por esta linha
+
+  @@index([productId])
+}
+
+// ---- Movimentações de estoque (fonte da verdade do saldo) ----------------
+
+model StockMovement {
+  id         String   @id @default(cuid())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+  type       String // "IN" | "OUT" (SQLite não suporta enum no Prisma)
+  quantity   Float // sempre positivo; o sinal vem de `type`
+  unit       String   @default("UN")
+  occurredAt DateTime // quando a movimentação ocorreu
+  reason     String? // "purchase" | "consumption" | "adjustment" | "loss" | livre
+
+  purchaseItem   PurchaseItem? @relation(fields: [purchaseItemId], references: [id])
+  purchaseItemId String?       @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([productId, occurredAt])
+  @@index([type, occurredAt])
+}
+
+// ---- Lista de compras ----------------------------------------------------
+
+model ShoppingList {
+  id          String             @id @default(cuid())
+  periodMonth DateTime           @unique // 1º dia do mês alvo (local)
+  status      String             @default("draft") // "draft" | "active" | "done"
+  items       ShoppingListItem[]
+  createdAt   DateTime           @default(now())
+}
+
+model ShoppingListItem {
+  id                String       @id @default(cuid())
+  list              ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  listId            String
+  product           Product?     @relation(fields: [productId], references: [id])
+  productId         String?
+  customName        String? // rótulo livre para itens manuais sem produto
+  origin            String       @default("auto") // "auto" | "manual"
+  included          Boolean      @default(true) // usuário pode desmarcar item auto
+  checked           Boolean      @default(false) // marcado como comprado
+  suggestedQuantity Float? // da média de 6 meses (menos estoque, se ligado)
+  unit              String       @default("UN")
+  lastUnitPrice     Float? // preço na compra mais recente
+  lastPurchaseDate  DateTime?
+
+  @@index([listId])
+  @@index([productId])
+}
