@@ -2,7 +2,7 @@
 const USER_AGENT =
   "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36 Dispensa/1.0";
 
-export async function fetchHtml(url: string, timeoutMs = 12000): Promise<string> {
+export async function fetchHtml(url: string, timeoutMs = 8000): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {

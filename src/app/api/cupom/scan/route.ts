@@ -9,6 +9,10 @@ import { getStrategy } from "@/lib/sefaz/registry";
 
 const schema = z.object({ qr: z.string().min(1) });
 
+// Raspagem da SEFAZ roda no servidor (Node) e pode demorar alguns segundos.
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
 export async function POST(request: Request) {
   try {
     const { qr } = schema.parse(await request.json());

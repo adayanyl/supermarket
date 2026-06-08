@@ -10,7 +10,7 @@ PWA para ajudar nas compras de mercado a partir do **cupom fiscal (NFC-e)**:
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript) — front PWA + rotas de API no mesmo projeto
-- **Prisma 7 + SQLite** via driver adapter (`better-sqlite3`)
+- **Prisma 7 + SQLite/libSQL** via driver adapter `@prisma/adapter-libsql` (arquivo local no dev; **Turso** em produção)
 - **Tailwind CSS v4**
 - **@zxing/browser** (leitura de QR na câmera) · **Cheerio** (raspagem da SEFAZ no servidor)
 - **Zod** (validação) · **date-fns / date-fns-tz** (mês no fuso de São Paulo) · **Fuse.js** (match fuzzy)
@@ -36,6 +36,11 @@ npm run dev                   # http://localhost:3000
 | `npm test` | testes de domínio (Vitest) |
 | `npm run typecheck` / `lint` | TypeScript / ESLint |
 | `npm run db:migrate` / `db:seed` / `db:studio` / `db:reset` | banco de dados |
+
+## Deploy (Vercel + Turso, grátis)
+
+O runtime usa libSQL: em produção aponta para o **Turso** (SQLite na nuvem) via
+`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`. Passo a passo completo em **[DEPLOY.md](./DEPLOY.md)**.
 
 ## Arquitetura
 
