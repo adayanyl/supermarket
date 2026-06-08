@@ -1,7 +1,7 @@
 // Lógica pura da lista de compras: buckets de mês (fuso de São Paulo),
 // média de consumo de 6 meses com fallback "os dois" (consumo real -> compras)
 // e construção da sugestão (descontando o estoque atual, opcional).
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 export const DEFAULT_TZ = "America/Sao_Paulo";
 
@@ -35,6 +35,17 @@ export function lastNMonthKeys(
     keys.push(`${yy}-${pad2(mm)}`);
   }
   return keys.reverse();
+}
+
+/** Instante canônico (meio-dia UTC) que representa um mês — usado como chave única. */
+export function monthKeyToDate(key: MonthKey): Date {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1, 12));
+}
+
+/** Início do mês (00:00 no fuso) em UTC — limite para consultas de movimentação. */
+export function monthStartUtc(key: MonthKey, timeZone: string = DEFAULT_TZ): Date {
+  return fromZonedTime(`${key}-01T00:00:00`, timeZone);
 }
 
 /**

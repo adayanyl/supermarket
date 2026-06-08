@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dispensa — compras inteligentes 🧺
 
-## Getting Started
+PWA para ajudar nas compras de mercado a partir do **cupom fiscal (NFC-e)**:
 
-First, run the development server:
+- 📷 **Lê o QR Code** do cupom, identifica a chave de acesso e tenta buscar os itens na SEFAZ (com **edição manual** sempre disponível).
+- 🧺 Controla a **dispensa** (entradas e saídas de estoque).
+- 📝 Gera a **lista de compras do mês** pela **média de consumo dos últimos 6 meses** (consumo real, com _fallback_ nas compras) e mostra o **preço da última compra** de cada item.
+- ➕ Permite **incluir e remover** itens da lista manualmente.
+
+## Stack
+
+- **Next.js 16** (App Router, TypeScript) — front PWA + rotas de API no mesmo projeto
+- **Prisma 7 + SQLite/libSQL** via driver adapter `@prisma/adapter-libsql` (arquivo local no dev; **Turso** em produção)
+- **Tailwind CSS v4**
+- **@zxing/browser** (leitura de QR na câmera) · **Cheerio** (raspagem da SEFAZ no servidor)
+- **Zod** (validação) · **date-fns / date-fns-tz** (mês no fuso de São Paulo) · **Fuse.js** (match fuzzy)
+- **Vitest** (testes da lógica de domínio)
+
+## Como rodar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env          # DATABASE_URL="file:./dev.db"
+npm install                   # gera o client do Prisma no postinstall
+npm run db:migrate            # cria o banco e aplica as migrations
+npm run db:seed               # (opcional) dados de exemplo: 6 meses de compras + consumo
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> **Câmera:** o navegador só libera a câmera em contexto seguro. `localhost` funciona no desktop; no **celular**, sirva por HTTPS (`next dev --experimental-https` ou um túnel). Sem câmera, use o campo **"colar link/chave"** ou **"inserir compra manualmente"**.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | O que faz |
+| --- | --- |
+| `npm run dev` / `build` / `start` | desenvolvimento / build / produção |
+| `npm test` | testes de domínio (Vitest) |
+| `npm run typecheck` / `lint` | TypeScript / ESLint |
+| `npm run db:migrate` / `db:seed` / `db:studio` / `db:reset` | banco de dados |
 
-## Learn More
+## Deploy (Vercel + Turso, grátis)
 
-To learn more about Next.js, take a look at the following resources:
+O runtime usa libSQL: em produção aponta para o **Turso** (SQLite na nuvem) via
+`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`. Passo a passo completo em **[DEPLOY.md](./DEPLOY.md)**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Arquitetura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+  lib/domain/      # lógica pura e testável (chave NFC-e, média 6m, matching)
+  lib/sefaz/       # leitura do cupom: parser #tabResult, estratégias por UF, registry
+  lib/services/    # estoque (saldo), importação (transação), geração da lista
+  app/api/         # rotas de mutação + scan
+  app/             # páginas (Server Components leem o banco direto)
+  components/      # componentes client (câmera, listas interativas)
+prisma/            # schema, migrations e seed
+```
 
-## Deploy on Vercel
+### Sobre a leitura do cupom (importante)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+O QR Code da NFC-e **não contém os produtos** — só um link da SEFAZ + a chave de acesso (44 dígitos). Os itens precisam ser consultados no portal da SEFAZ, e **isso varia por estado** (alguns não retornam os itens). Por isso:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- A raspagem é **best-effort** e roda **no servidor** (CORS + parsing de HTML).
+- A UF principal implementada é **Goiás (GO)**; novas UFs entram em `src/lib/sefaz/registry.ts`.
+- Quando a consulta não traz itens (estado sem suporte, rede bloqueada, layout diferente), o app **degrada para entrada manual** — continua 100% funcional.
+
+### Cálculo da lista ("os dois")
+
+Para cada produto, em cada um dos 6 meses anteriores: usa o **consumo real** (saídas) quando houver; senão, a **quantidade comprada**. A média é dividida por 6, arredondada pela unidade e, opcionalmente, **descontado o estoque atual** da dispensa.
