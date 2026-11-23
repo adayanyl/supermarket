@@ -2,7 +2,8 @@
 import { z } from "zod";
 
 import { monthKeyOf } from "@/lib/domain/shopping-list";
-import { handleError, ok } from "@/lib/http";
+import { withAuth } from "@/lib/auth";
+import { ok } from "@/lib/http";
 import { generateShoppingList } from "@/lib/services/shopping";
 
 const schema = z.object({
@@ -14,13 +15,11 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  try {
+  return withAuth(async ({ team }) => {
     const body = await request.json().catch(() => ({}));
     const { month, subtractStock } = schema.parse(body ?? {});
     const monthKey = month ?? monthKeyOf(new Date());
-    const listId = await generateShoppingList(monthKey, subtractStock ?? true);
+    const listId = await generateShoppingList(team.id, monthKey, subtractStock ?? true);
     return ok({ listId, month: monthKey });
-  } catch (err) {
-    return handleError(err);
-  }
+  });
 }

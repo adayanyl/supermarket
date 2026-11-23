@@ -1,12 +1,15 @@
 import Link from "next/link";
 
+import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatBRL, formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function CupomPage() {
+  const { team } = await requireAuth();
   const purchases = await prisma.purchase.findMany({
+    where: { teamId: team.id },
     orderBy: { purchasedAt: "desc" },
     include: { store: true, _count: { select: { items: true } } },
   });

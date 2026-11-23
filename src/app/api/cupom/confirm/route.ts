@@ -2,7 +2,8 @@
 // entradas (IN) na dispensa. Idempotente pela chave de acesso.
 import { z } from "zod";
 
-import { handleError, ok } from "@/lib/http";
+import { withAuth } from "@/lib/auth";
+import { ok } from "@/lib/http";
 import { confirmPurchase } from "@/lib/services/import";
 
 const itemSchema = z.object({
@@ -35,11 +36,9 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  try {
+  return withAuth(async ({ team }) => {
     const input = schema.parse(await request.json());
-    const result = await confirmPurchase(input);
+    const result = await confirmPurchase(team.id, input);
     return ok(result);
-  } catch (err) {
-    return handleError(err);
-  }
+  });
 }

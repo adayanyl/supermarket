@@ -1,6 +1,10 @@
 import { ScanFlow } from "@/components/ScanFlow";
+import { requireAuth } from "@/lib/auth";
 
-export default function ScanPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ScanPage() {
+  await requireAuth();
   return (
     <div className="space-y-4">
       <header>

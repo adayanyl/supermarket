@@ -14,6 +14,7 @@ PWA de compras: lê o cupom fiscal (NFC-e), controla a dispensa e gera a lista m
 - **Domínio puro** em `src/lib/domain/**` (sem Next/Prisma) — é onde ficam os testes (Vitest). Rode `npm test`.
 - **Datas/mês**: sempre no fuso `America/Sao_Paulo` (helpers em `domain/shopping-list.ts`).
 - **Páginas** que leem o banco são Server Components com `export const dynamic = "force-dynamic"`. Mutações passam por rotas em `app/api/**` (validadas com Zod) chamadas via `src/lib/client.ts`.
+- **Login e equipes**: usuário + senha (scrypt, `domain/password.ts`), sessão em cookie httpOnly + tabela `Session` (`src/lib/auth.ts`). `src/proxy.ts` só faz a checagem otimista do cookie. Páginas chamam `requireAuth()`; rotas usam `withAuth(async ({ user, team }) => ...)`. **Todo dado da dispensa é da equipe ativa**: `Product`, `Purchase` e `ShoppingList` têm `teamId` — sempre filtre por `team.id` (alias, itens e movimentações via relação). Um usuário tem vários emails (`UserEmail`, qualquer um serve no login). Convites são links (`TeamInvite.token`), não há envio de email.
 - **SEFAZ**: raspagem best-effort no servidor; estratégias por UF em `src/lib/sefaz/`. Sempre degrade para entrada manual. Teste parsers com fixtures (sem rede).
 
 ## Antes de finalizar
