@@ -7,9 +7,9 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * então não dá para exportar estático: o WebView carrega a URL de produção.
  * Web e app usam o mesmo código e o mesmo banco.
  *
- * Defina a URL ao sincronizar:  CAP_SERVER_URL=https://seu-app.vercel.app npx cap sync
+ * Para outro endereço (ex.: preview):  CAP_SERVER_URL=https://... npx cap sync
  */
-const serverUrl = process.env.CAP_SERVER_URL ?? "https://SEU-APP.vercel.app";
+const serverUrl = process.env.CAP_SERVER_URL ?? "https://supermarket-bice-rho.vercel.app";
 
 const config: CapacitorConfig = {
   // ATENÇÃO: o appId vira o "nome do pacote" na Google Play e não pode mudar depois do 1º upload.

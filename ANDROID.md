@@ -22,7 +22,7 @@ Arquivos:
 
 ## 0. Antes de tudo (uma vez)
 
-1. **Site no ar** em HTTPS (ver `DEPLOY.md`). Anote a URL, ex.: `https://dispensa.vercel.app`.
+1. **Site no ar** em HTTPS (ver `DEPLOY.md`). Anote a URL, hoje `https://supermarket-bice-rho.vercel.app`.
 2. Edite o e-mail de contato em `src/app/privacidade/page.tsx` e faça deploy.
    Confira que `https://SUA-URL/privacidade` abre **sem login**.
 3. Decida o **`appId`** em `capacitor.config.ts` (hoje `app.dispensa.compras`).
@@ -35,14 +35,14 @@ Arquivos:
 
 ```bash
 # Linux/macOS
-CAP_SERVER_URL=https://dispensa.vercel.app npm run android:sync
+CAP_SERVER_URL=https://supermarket-bice-rho.vercel.app npm run android:sync
 # Windows (PowerShell)
-$env:CAP_SERVER_URL="https://dispensa.vercel.app"; npm run android:sync
+$env:CAP_SERVER_URL="https://supermarket-bice-rho.vercel.app"; npm run android:sync
 ```
 
+A URL de produção já é o padrão no `capacitor.config.ts`, então `npm run android:sync`
+sozinho basta; a variável só serve para apontar para outro endereço (ex.: um preview).
 Repita o `android:sync` sempre que mudar `capacitor.config.ts` ou atualizar o Capacitor.
-Dica: troque o valor padrão `https://SEU-APP.vercel.app` no `capacitor.config.ts` pela URL
-real e faça commit, assim não precisa da variável.
 
 Teste num celular (modo desenvolvedor + depuração USB) ou emulador:
 
