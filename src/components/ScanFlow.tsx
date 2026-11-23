@@ -1,11 +1,12 @@
 "use client";
 
-import { BrowserMultiFormatReader, type IScannerControls } from "@zxing/browser";
+import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/client";
+import { parseQr } from "@/lib/domain/chave";
 import { formatBRL } from "@/lib/format";
 
 type ScanResponse = {
@@ -96,12 +97,19 @@ export function ScanFlow() {
   async function startCamera() {
     setError(null);
     try {
-      const reader = new BrowserMultiFormatReader();
+      // Só QR Code: o leitor multiformato pegava códigos de barras do cupom
+      // (ex.: "15641") e mandava isso no lugar do link da NFC-e.
+      const reader = new BrowserQRCodeReader();
       const controls = await reader.decodeFromConstraints(
         { video: { facingMode: "environment" } },
         videoRef.current!,
         (result, _err, ctrl) => {
           if (result) {
+            // Ignora QR que não é de NFC-e e continua procurando.
+            if (!parseQr(result.getText()).chave) {
+              setError("Esse QR não é o da nota fiscal. Aponte para o QR Code do cupom.");
+              return;
+            }
             ctrl.stop();
             controlsRef.current = null;
             setCameraOn(false);
