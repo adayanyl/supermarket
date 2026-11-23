@@ -39,6 +39,11 @@ merge na `main` (ou, no passo 3, aponte a Vercel para este branch).
 4. **Deploy**. No fim você recebe uma URL HTTPS pública — a câmera de QR funciona
    porque é HTTPS, e dá para "instalar" o PWA na tela inicial do celular.
 
+## Região das funções
+
+O `vercel.json` fixa as funções em **São Paulo (`gru1`)**: a SEFAZ de alguns estados
+(como GO) recusa acessos de fora do Brasil, e a região padrão da Vercel é nos EUA.
+
 ## Atualizações de schema
 
 Ao mudar o `schema.prisma`:

@@ -52,6 +52,7 @@ export async function POST(request: Request) {
         city: result.store?.city ?? null,
       },
       items: result.items,
+      importNote: result.reason ?? null,
     });
   });
 }

@@ -13,6 +13,7 @@ type ScanResponse = {
   uf: string | null;
   sefazUrl: string | null;
   importStatus: string;
+  importNote?: string | null;
   purchasedAt: string;
   totalValue: number | null;
   store: { cnpj: string | null; name: string | null; uf: string | null; city: string | null };
@@ -229,7 +230,7 @@ export function ScanFlow() {
         >
           {draft.importStatus === "auto"
             ? "Itens importados da SEFAZ. Confira e ajuste se precisar."
-            : "Não foi possível buscar os itens automaticamente. Preencha manualmente."}
+            : `Não foi possível buscar os itens automaticamente.${draft.importNote ? ` ${draft.importNote}` : ""}`}
         </div>
 
         <div className="space-y-2 rounded-2xl bg-white p-3 shadow-sm">
