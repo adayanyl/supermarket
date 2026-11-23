@@ -51,6 +51,17 @@ git push                                                     # Vercel redeploya
 
 ## Login e equipes (migration `auth_teams`)
 
+> **Se o login/cadastro der "O banco de dados está desatualizado" (ou 500)**, a
+> migration não foi aplicada no Turso. Confira e aplique:
+>
+> ```bash
+> turso db shell dispensa ".tables"   # precisa listar User, Team, Session...
+> turso db shell dispensa < prisma/migrations/20261123120536_auth_teams/migration.sql
+> ```
+>
+> Rode o `auth_teams` **uma vez só** (não use o `cat prisma/migrations/*` do
+> passo 1 num banco que já existe).
+
 Ao aplicar a migration `*_auth_teams` num banco que já tem dados, tudo o que
 existia vai para a equipe **"Minha casa"**. A **primeira pessoa que se
 cadastrar** vira dona dessa equipe e encontra os dados como estavam; quem se
