@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatBRL, formatDate, formatQty } from "@/lib/format";
 
@@ -14,8 +15,9 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function CupomDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const purchase = await prisma.purchase.findUnique({
-    where: { id },
+  const { team } = await requireAuth();
+  const purchase = await prisma.purchase.findFirst({
+    where: { id, teamId: team.id },
     include: { store: true, items: { include: { product: true } } },
   });
   if (!purchase) notFound();

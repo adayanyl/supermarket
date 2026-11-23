@@ -1,14 +1,17 @@
 import { PantryList } from "@/components/PantryList";
+import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getStockMap } from "@/lib/services/stock";
 
 export const dynamic = "force-dynamic";
 
 export default async function DispensaPage() {
+  const { team } = await requireAuth();
   const [products, stockMap, lastItems] = await Promise.all([
-    prisma.product.findMany({ orderBy: { name: "asc" } }),
-    getStockMap(),
+    prisma.product.findMany({ where: { teamId: team.id }, orderBy: { name: "asc" } }),
+    getStockMap(team.id),
     prisma.purchaseItem.findMany({
+      where: { purchase: { teamId: team.id } },
       orderBy: { purchase: { purchasedAt: "desc" } },
       select: { productId: true, unitPrice: true },
     }),

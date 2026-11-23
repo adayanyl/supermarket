@@ -1,8 +1,9 @@
 // Adiciona um item manual à lista (produto existente ou nome livre).
 import { z } from "zod";
 
+import { withAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { bad, handleError, ok } from "@/lib/http";
+import { bad, ok } from "@/lib/http";
 
 const schema = z
   .object({
@@ -16,16 +17,18 @@ const schema = z
   });
 
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  try {
+  return withAuth(async ({ team }) => {
     const { id } = await ctx.params;
     const data = schema.parse(await request.json());
+    const list = await prisma.shoppingList.findFirst({ where: { id, teamId: team.id } });
+    if (!list) return bad("Lista não encontrada.", 404);
 
     let unit = data.unit ?? "UN";
     let lastUnitPrice: number | null = null;
     let lastPurchaseDate: Date | null = null;
 
     if (data.productId) {
-      const product = await prisma.product.findUnique({ where: { id: data.productId } });
+      const product = await prisma.product.findFirst({ where: { id: data.productId, teamId: team.id } });
       if (!product) return bad("Produto não encontrado.", 404);
       unit = data.unit ?? product.unit;
       const lastItem = await prisma.purchaseItem.findFirst({
@@ -53,7 +56,5 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       },
     });
     return ok(item, { status: 201 });
-  } catch (err) {
-    return handleError(err);
-  }
+  });
 }

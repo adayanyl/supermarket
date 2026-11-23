@@ -49,6 +49,13 @@ turso db shell dispensa < prisma/migrations/<NOVA>/migration.sql
 git push                                                     # Vercel redeploya
 ```
 
+## Login e equipes (migration `auth_teams`)
+
+Ao aplicar a migration `*_auth_teams` num banco que já tem dados, tudo o que
+existia vai para a equipe **"Minha casa"**. A **primeira pessoa que se
+cadastrar** vira dona dessa equipe e encontra os dados como estavam; quem se
+cadastrar depois ganha uma equipe nova (ou entra pela equipe do convite).
+
 ## Notas
 
 - O client do Prisma é regenerado no build (`postinstall`) — não commitamos `src/generated`.

@@ -4,7 +4,8 @@
 import { z } from "zod";
 
 import { chaveEmissionDate, parseChave, parseQr } from "@/lib/domain/chave";
-import { bad, handleError, ok } from "@/lib/http";
+import { withAuth } from "@/lib/auth";
+import { bad, ok } from "@/lib/http";
 import { getStrategy } from "@/lib/sefaz/registry";
 
 const schema = z.object({ qr: z.string().min(1) });
@@ -14,11 +15,18 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(request: Request) {
-  try {
+  return withAuth(async () => {
     const { qr } = schema.parse(await request.json());
     const { chave, url, params } = parseQr(qr);
     if (!chave) {
-      return bad("Não consegui identificar a chave de acesso (44 dígitos) no QR Code.");
+      // Ajuda a diagnosticar leituras de câmera/colagens fora do padrão.
+      console.warn("[cupom/scan] chave não encontrada", { length: qr.length, sample: qr.slice(0, 120) });
+      const digits = qr.replace(/\D/g, "").length;
+      return bad(
+        digits > 0 && digits < 44
+          ? `A chave de acesso tem 44 dígitos e encontrei só ${digits}. Confira se digitou a chave inteira (fica embaixo do QR Code, em grupos de 4 números).`
+          : "Não consegui identificar a chave de acesso (44 dígitos) no QR Code. Tente de novo ou digite a chave impressa no cupom.",
+      );
     }
 
     let info;
@@ -45,7 +53,5 @@ export async function POST(request: Request) {
       },
       items: result.items,
     });
-  } catch (err) {
-    return handleError(err);
-  }
+  });
 }

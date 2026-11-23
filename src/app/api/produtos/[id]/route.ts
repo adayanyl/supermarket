@@ -1,9 +1,10 @@
 // Edição de um produto (nome, unidade, EAN, categoria).
 import { z } from "zod";
 
+import { withAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { normalize } from "@/lib/domain/matching";
-import { handleError, ok } from "@/lib/http";
+import { bad, ok } from "@/lib/http";
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -13,9 +14,11 @@ const schema = z.object({
 });
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  try {
+  return withAuth(async ({ team }) => {
     const { id } = await ctx.params;
     const data = schema.parse(await request.json());
+    const owned = await prisma.product.findFirst({ where: { id, teamId: team.id } });
+    if (!owned) return bad("Produto não encontrado.", 404);
 
     const update: {
       name?: string;
@@ -34,7 +37,5 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
 
     const product = await prisma.product.update({ where: { id }, data: update });
     return ok(product);
-  } catch (err) {
-    return handleError(err);
-  }
+  });
 }

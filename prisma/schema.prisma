@@ -10,13 +10,100 @@ datasource db {
   provider = "sqlite"
 }
 
+// ---- Contas, equipes e acesso ---------------------------------------------
+// Cada usuário entra com usuário (ou qualquer um dos seus emails) + senha.
+// Os dados da dispensa pertencem a uma equipe (ex.: a casa), compartilhada
+// entre os membros. Um usuário pode estar em várias equipes.
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique // sempre minúsculo (normalizeUsername)
+  name         String
+  passwordHash String // scrypt$N$r$p$salt$hash (domain/password.ts)
+
+  emails      UserEmail[]
+  memberships TeamMember[]
+  sessions    Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Um usuário pode ter vários emails; qualquer um serve para entrar.
+model UserEmail {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  email     String   @unique // sempre minúsculo (normalizeEmail)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Team {
+  id   String @id @default(cuid())
+  name String
+
+  members       TeamMember[]
+  invites       TeamInvite[]
+  products      Product[]
+  purchases     Purchase[]
+  shoppingLists ShoppingList[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      String   @default("member") // "owner" | "member" (SQLite: sem enum)
+  createdAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+// Convite por link: o dono gera um link (opcionalmente para um email) e envia
+// para a pessoa. Quem abrir o link logado entra na equipe.
+model TeamInvite {
+  id          String    @id @default(cuid())
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
+  email       String? // para quem é (informativo)
+  token       String    @unique
+  createdById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  acceptedBy  String?
+  createdAt   DateTime  @default(now())
+
+  @@index([teamId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  tokenHash    String   @unique // sha256 do token do cookie
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  activeTeamId String? // equipe em uso nesta sessão
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
 // ---- Catálogo ------------------------------------------------------------
 
 model Product {
   id             String  @id @default(cuid())
   name           String // nome canônico, editável
   normalizedName String // forma normalizada (sem acento/caixa) para matching
-  ean            String? @unique // código de barras, quando houver
+  ean            String? // código de barras, quando houver (único por equipe)
   unit           String  @default("UN") // UN, KG, L, PCT...
   category       String?
 
@@ -25,10 +112,14 @@ model Product {
   movements     StockMovement[]
   listItems     ShoppingListItem[]
 
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId String
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([normalizedName])
+  @@unique([teamId, ean])
+  @@index([teamId, normalizedName])
 }
 
 // Cada descrição/EAN já visto num cupom, mapeado para o produto canônico.
@@ -62,7 +153,7 @@ model Store {
 
 model Purchase {
   id           String   @id @default(cuid())
-  accessKey    String?  @unique // chave de acesso (44 dígitos) — dedup
+  accessKey    String? // chave de acesso (44 dígitos) — dedup por equipe
   purchasedAt  DateTime // data do cupom (fallback: momento do scan)
   totalValue   Float?
   importStatus String   @default("manual") // "auto" | "partial" | "manual"
@@ -75,10 +166,14 @@ model Purchase {
 
   items PurchaseItem[]
 
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId String
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([purchasedAt])
+  @@unique([teamId, accessKey])
+  @@index([teamId, purchasedAt])
 }
 
 model PurchaseItem {
@@ -125,10 +220,14 @@ model StockMovement {
 
 model ShoppingList {
   id          String             @id @default(cuid())
-  periodMonth DateTime           @unique // 1º dia do mês alvo (local)
+  periodMonth DateTime // 1º dia do mês alvo (local)
   status      String             @default("draft") // "draft" | "active" | "done"
   items       ShoppingListItem[]
+  team        Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
   createdAt   DateTime           @default(now())
+
+  @@unique([teamId, periodMonth])
 }
 
 model ShoppingListItem {
