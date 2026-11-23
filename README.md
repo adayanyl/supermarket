@@ -37,6 +37,10 @@ npm run dev                   # http://localhost:3000
 | `npm run typecheck` / `lint` | TypeScript / ESLint |
 | `npm run db:migrate` / `db:seed` / `db:studio` / `db:reset` | banco de dados |
 
+## App Android (Google Play)
+
+O app Android abre o site publicado via Capacitor (mesmo código e banco). Passo a passo de build, assinatura e publicação em [`ANDROID.md`](ANDROID.md).
+
 ## Deploy (Vercel + Turso, grátis)
 
 O runtime usa libSQL: em produção aponta para o **Turso** (SQLite na nuvem) via
