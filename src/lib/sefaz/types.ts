@@ -24,6 +24,8 @@ export interface SefazResult {
   purchasedAt?: Date;
   totalValue?: number;
   items: ParsedItem[];
+  /** Por que não veio item nenhum (para log e para mostrar na tela). */
+  reason?: string;
 }
 
 export interface SefazInput {

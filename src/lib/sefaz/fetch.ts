@@ -21,3 +21,18 @@ export async function fetchHtml(url: string, timeoutMs = 8000): Promise<string> 
     clearTimeout(timer);
   }
 }
+
+/** Traduz o erro do fetch para algo legível (timeout, certificado, HTTP...). */
+export function describeFetchError(err: unknown): string {
+  const e = err as { name?: string; message?: string; cause?: { code?: string; message?: string } };
+  if (e?.name === "AbortError") return "a SEFAZ demorou demais para responder";
+  const code = e?.cause?.code ?? "";
+  if (/CERT|SELF_SIGNED|UNABLE_TO_VERIFY|SSL|TLS/i.test(code + (e?.cause?.message ?? ""))) {
+    return `certificado da SEFAZ não aceito: ${code || e?.cause?.message}`;
+  }
+  if (/ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(code)) {
+    return `conexão recusada: ${code}`;
+  }
+  if (/^HTTP \d+/.test(e?.message ?? "")) return `a SEFAZ respondeu ${e!.message}`;
+  return e?.message || "erro desconhecido";
+}
