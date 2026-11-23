@@ -4,7 +4,8 @@
 import { z } from "zod";
 
 import { chaveEmissionDate, parseChave, parseQr } from "@/lib/domain/chave";
-import { bad, handleError, ok } from "@/lib/http";
+import { withAuth } from "@/lib/auth";
+import { bad, ok } from "@/lib/http";
 import { getStrategy } from "@/lib/sefaz/registry";
 
 const schema = z.object({ qr: z.string().min(1) });
@@ -14,7 +15,7 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(request: Request) {
-  try {
+  return withAuth(async () => {
     const { qr } = schema.parse(await request.json());
     const { chave, url, params } = parseQr(qr);
     if (!chave) {
@@ -45,7 +46,5 @@ export async function POST(request: Request) {
       },
       items: result.items,
     });
-  } catch (err) {
-    return handleError(err);
-  }
+  });
 }

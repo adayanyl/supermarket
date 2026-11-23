@@ -14,6 +14,7 @@ import {
 import { getStockMap } from "./stock";
 
 export async function generateShoppingList(
+  teamId: string,
   monthKey: MonthKey,
   subtractStock: boolean,
 ): Promise<string> {
@@ -23,7 +24,7 @@ export async function generateShoppingList(
   const periodStart = monthStartUtc(monthKey);
 
   const movements = await prisma.stockMovement.findMany({
-    where: { occurredAt: { gte: windowStart, lt: periodStart } },
+    where: { occurredAt: { gte: windowStart, lt: periodStart }, product: { teamId } },
     select: { productId: true, type: true, quantity: true, occurredAt: true },
   });
 
@@ -42,8 +43,8 @@ export async function generateShoppingList(
   const productIds = [...byProduct.keys()];
 
   const [products, stockMap, latestItems] = await Promise.all([
-    prisma.product.findMany({ where: { id: { in: productIds } } }),
-    getStockMap(),
+    prisma.product.findMany({ where: { id: { in: productIds }, teamId } }),
+    getStockMap(teamId),
     prisma.purchaseItem.findMany({
       where: { productId: { in: productIds } },
       select: {
@@ -81,9 +82,9 @@ export async function generateShoppingList(
   });
 
   const list = await prisma.shoppingList.upsert({
-    where: { periodMonth },
+    where: { teamId_periodMonth: { teamId, periodMonth } },
     update: {},
-    create: { periodMonth, status: "draft" },
+    create: { teamId, periodMonth, status: "draft" },
   });
 
   // regenera apenas os itens automáticos; preserva os adicionados manualmente

@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { normalize } from "../src/lib/domain/matching";
 import { prisma } from "../src/lib/db";
+import { hashPassword } from "../src/lib/domain/password";
 import { confirmPurchase, type ConfirmItemInput } from "../src/lib/services/import";
 
 const STORE = { cnpj: "12345678000199", name: "SUPERMERCADO EXEMPLO LTDA", uf: "GO", city: "Goiânia" };
@@ -40,11 +41,33 @@ async function clear() {
   await prisma.productAlias.deleteMany();
   await prisma.product.deleteMany();
   await prisma.store.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.teamInvite.deleteMany();
+  await prisma.teamMember.deleteMany();
+  await prisma.userEmail.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.team.deleteMany();
+}
+
+// Login de exemplo: usuário "demo" (ou demo@dispensa.local), senha "demo1234".
+async function createDemoTeam(): Promise<string> {
+  const team = await prisma.team.create({ data: { name: "Casa Demo" } });
+  await prisma.user.create({
+    data: {
+      name: "Demo",
+      username: "demo",
+      passwordHash: await hashPassword("demo1234"),
+      emails: { create: { email: "demo@dispensa.local", isPrimary: true } },
+      memberships: { create: { teamId: team.id, role: "owner" } },
+    },
+  });
+  return team.id;
 }
 
 async function main() {
   console.log("Limpando dados...");
   await clear();
+  const teamId = await createDemoTeam();
 
   console.log("Criando compras dos últimos 6 meses...");
   // Fatores de variação por mês (do mais antigo ao mais recente).
@@ -65,7 +88,7 @@ async function main() {
       };
     });
     const totalValue = Math.round(items.reduce((s, it) => s + it.totalPrice, 0) * 100) / 100;
-    await confirmPurchase({
+    await confirmPurchase(teamId, {
       accessKey: buildAccessKey(i),
       uf: "GO",
       importStatus: "auto",
@@ -112,6 +135,7 @@ async function main() {
     prisma.stockMovement.count(),
   ]);
   console.log(`Pronto: ${products} produtos, ${purchases} compras, ${movements} movimentações.`);
+  console.log(`Login: usuário "demo" (ou demo@dispensa.local), senha "demo1234".`);
 }
 
 main()

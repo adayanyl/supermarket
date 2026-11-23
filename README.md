@@ -6,6 +6,7 @@ PWA para ajudar nas compras de mercado a partir do **cupom fiscal (NFC-e)**:
 - 🧺 Controla a **dispensa** (entradas e saídas de estoque).
 - 📝 Gera a **lista de compras do mês** pela **média de consumo dos últimos 6 meses** (consumo real, com _fallback_ nas compras) e mostra o **preço da última compra** de cada item.
 - ➕ Permite **incluir e remover** itens da lista manualmente.
+- 👥 **Login com usuário e senha**, **equipes** (a casa divide a mesma dispensa; o dono convida por link) e **vários emails por conta** (qualquer um serve para entrar).
 
 ## Stack
 
@@ -22,7 +23,7 @@ PWA para ajudar nas compras de mercado a partir do **cupom fiscal (NFC-e)**:
 cp .env.example .env          # DATABASE_URL="file:./dev.db"
 npm install                   # gera o client do Prisma no postinstall
 npm run db:migrate            # cria o banco e aplica as migrations
-npm run db:seed               # (opcional) dados de exemplo: 6 meses de compras + consumo
+npm run db:seed               # (opcional) dados de exemplo + login demo / demo1234
 npm run dev                   # http://localhost:3000
 ```
 

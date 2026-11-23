@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatBRL, formatDate, formatMonth } from "@/lib/format";
 import { getStockMap } from "@/lib/services/stock";
@@ -7,18 +8,34 @@ import { getStockMap } from "@/lib/services/stock";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const { user, team } = await requireAuth();
   const [productCount, purchaseCount, lastPurchase, stockMap] = await Promise.all([
-    prisma.product.count(),
-    prisma.purchase.count(),
-    prisma.purchase.findFirst({ orderBy: { purchasedAt: "desc" }, include: { store: true } }),
-    getStockMap(),
+    prisma.product.count({ where: { teamId: team.id } }),
+    prisma.purchase.count({ where: { teamId: team.id } }),
+    prisma.purchase.findFirst({
+      where: { teamId: team.id },
+      orderBy: { purchasedAt: "desc" },
+      include: { store: true },
+    }),
+    getStockMap(team.id),
   ]);
   const inStock = [...stockMap.values()].filter((v) => v > 0.0001).length;
 
   return (
     <div className="space-y-5">
       <header>
-        <p className="text-sm capitalize text-gray-500">{formatMonth(new Date())}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm capitalize text-gray-500">{formatMonth(new Date())}</p>
+          <Link
+            href="/conta"
+            className="flex min-w-0 items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-700 shadow-sm"
+          >
+            <span aria-hidden>👤</span>
+            <span className="truncate">
+              {user.name.split(" ")[0]} · {team.name}
+            </span>
+          </Link>
+        </div>
         <h1 className="text-2xl font-bold">Dispensa</h1>
         <p className="text-sm text-gray-500">Cupom fiscal → dispensa → lista do mês.</p>
       </header>

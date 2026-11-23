@@ -1,10 +1,11 @@
 // Saldo de estoque derivado das movimentações: Σ(IN) − Σ(OUT) por produto.
 import { prisma } from "@/lib/db";
 
-/** Mapa productId -> saldo atual em estoque. */
-export async function getStockMap(): Promise<Map<string, number>> {
+/** Mapa productId -> saldo atual em estoque, só dos produtos da equipe. */
+export async function getStockMap(teamId: string): Promise<Map<string, number>> {
   const grouped = await prisma.stockMovement.groupBy({
     by: ["productId", "type"],
+    where: { product: { teamId } },
     _sum: { quantity: true },
   });
   const map = new Map<string, number>();

@@ -1,8 +1,9 @@
 // Movimentação manual de estoque: baixa de consumo (OUT) ou entrada/ajuste (IN).
 import { z } from "zod";
 
+import { withAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { bad, handleError, ok } from "@/lib/http";
+import { bad, ok } from "@/lib/http";
 
 const schema = z.object({
   productId: z.string().min(1),
@@ -14,9 +15,9 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  try {
+  return withAuth(async ({ team }) => {
     const data = schema.parse(await request.json());
-    const product = await prisma.product.findUnique({ where: { id: data.productId } });
+    const product = await prisma.product.findFirst({ where: { id: data.productId, teamId: team.id } });
     if (!product) return bad("Produto não encontrado.", 404);
 
     const movement = await prisma.stockMovement.create({
@@ -30,7 +31,5 @@ export async function POST(request: Request) {
       },
     });
     return ok(movement, { status: 201 });
-  } catch (err) {
-    return handleError(err);
-  }
+  });
 }
